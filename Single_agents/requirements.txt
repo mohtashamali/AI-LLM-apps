@@ -1,0 +1,69 @@
+# 📄 AI Resume Analyzer
+
+A Streamlit app that compares a candidate's resume (PDF) against a job description and returns a match score, a review summary, and a skill breakdown — powered by Groq's Llama 3.1 via LangChain.
+
+## Features
+
+- Upload a resume as a PDF and paste in a job description
+- Get a **match score (0–100)** with a color-coded score card and progress bar
+- Read a short **AI-generated review** of the candidate's fit, strengths, and gaps
+- See skills broken into three groups:
+  - ✅ Matching skills (present in resume and required by the job)
+  - ❌ Missing skills (required by the job but not found in the resume)
+  - 🧠 All skills extracted from the resume
+- Automatic handling of long resumes and API rate limits, with retries on transient errors
+
+## Requirements
+
+- Python 3.10+
+- A [Groq API key](https://console.groq.com/keys)
+
+## Installation
+
+```bash
+pip install streamlit pypdf langchain-core langchain-groq python-dotenv groq
+```
+
+## Setup
+
+Create a `.env` file in the project root with your Groq API key:
+
+```
+GROQ_API_KEY=your_api_key_here
+```
+
+## Usage
+
+```bash
+streamlit run resume_analyzer_fixed.py
+```
+
+Then in the browser:
+
+1. Upload a resume PDF in the sidebar.
+2. Paste the job description into the text area.
+3. Click **Analyze Resume**.
+4. Review the match score, summary, and skill breakdown.
+
+## How it works
+
+1. The PDF is parsed with `pypdf` to extract raw text.
+2. The resume text and job description are inserted into a prompt template.
+3. The prompt is sent to `llama-3.1-8b-instant` via `langchain-groq`, using structured output (`with_structured_output`) to get back a typed result: `match_score`, `review`, `extract_skills`, `matching_skills`, and `missing_skills`.
+4. Results are cached in `st.session_state` and rendered as a score card, review text, and skill pill badges.
+
+## Notes & limitations
+
+- Resume text is trimmed to ~12,000 characters before being sent to the API to stay within Groq's free-tier tokens-per-minute limit. Very long resumes may be truncated.
+- The app retries automatically on rate-limit (429) errors and on malformed structured-output responses (400 `tool_use_failed`), up to 3 attempts each.
+- `llama-3.1-8b-instant` is fast and cheap but occasionally struggles with strict structured output. Swapping to a larger Groq model (e.g. `llama-3.3-70b-versatile`) in the `ChatGroq(model=...)` call will generally improve reliability at the cost of more tokens per request.
+- Scanned/image-only PDFs with no extractable text are not supported (no OCR step).
+
+## Project structure
+
+```
+.
+├── resume_analyzer_fixed.py   # Main Streamlit app
+├── .env                       # Groq API key (not committed)
+└── README.md
+```
